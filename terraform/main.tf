@@ -184,9 +184,9 @@ resource "aws_launch_template" "lt" {
 # Auto Scaling Group
 resource "aws_autoscaling_group" "asg" {
   name                = "pokeapi-asg"
-  min_size            = 3
+  min_size            = 2
   max_size            = 3
-  desired_capacity    = 3
+  desired_capacity    = 2
   vpc_zone_identifier = [aws_subnet.public_a.id, aws_subnet.public_b.id]
 
   launch_template {
