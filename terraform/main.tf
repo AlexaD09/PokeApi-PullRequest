@@ -287,3 +287,64 @@ output "alb_dns" {
   description = "ALB DNS name"
   value       = aws_lb.app_lb.dns_name
 }
+
+################################
+# Security Group - Database
+################################
+resource "aws_security_group" "db_sg" {
+  name        = "pokeapi-db-sg"
+  description = "Allow Postgres access from app"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.asg_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "pokeapi-db-sg"
+  }
+}
+################################
+# EC2 Instance - Database
+################################
+resource "aws_instance" "db_instance" {
+  ami           = data.aws_ami.amazon_linux.id
+  instance_type = "t2.micro"
+  subnet_id     = aws_subnet.public_a.id
+
+  vpc_security_group_ids = [
+    aws_security_group.db_sg.id
+  ]
+
+  user_data = base64encode(<<EOF
+#!/bin/bash
+yum update -y
+amazon-linux-extras install docker -y
+service docker start
+usermod -a -G docker ec2-user
+
+docker run -d \
+  --name postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=pokemon_db \
+  -p 5432:5432 \
+  postgres:15
+EOF
+)
+
+  tags = {
+    Name = "pokeapi-db-instance"
+  }
+}
+
